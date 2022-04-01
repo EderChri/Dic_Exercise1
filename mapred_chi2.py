@@ -10,10 +10,10 @@ class MrCat(MRJob):
 
     def steps(self):
         return [
-            MRStep(mapper = self.mapper,
-                  reducer = self.reducer0),
-            MRStep(reducer = self.reducer1),
-            MRStep(reducer = self.reducer2),
+            MRStep(mapper=self.mapper,
+                  reducer=self.reducer0),
+            MRStep(reducer=self.reducer1),
+            MRStep(reducer=self.reducer2),
             MRStep(reducer=self.reducer3)
         ]
 
@@ -80,6 +80,7 @@ class MrCat(MRJob):
                 break
             result[word] = value
         yield key, result
+
 
 if __name__ == '__main__':
     MrCat.run()
