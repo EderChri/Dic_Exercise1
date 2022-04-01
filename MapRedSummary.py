@@ -13,14 +13,14 @@ class MrFin(MRJob):
     def steps(self):
         return [
             MRStep(mapper=self.mapper,
-                  reducer=self.reducer0)
+                  reducer=self.reducer)
         ]
 
     def mapper(self, _, line):
         words_dict = dict(json.loads(line.split('\t')[1]))
         yield _, list(words_dict.keys())
 
-    def reducer0(self, _, values):
+    def reducer(self, _, values):
         result = []
         for value in list(values):
             result += value

@@ -1,2 +1,3 @@
-python3 mapred_chi2.py reviews_devset.json > output.txt
-python3 final_line.py output.txt >> output.txt
+python3 MapRedCatCount.py $1 > CatCount.txt
+python3 MapRedChiSq.py $1 > output.txt
+python3 MapRedSummary.py output.txt >> output.txt

@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="mapper" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="MrCatCount" type="PythonConfigurationType" factoryName="Python">
     <module name="Data intensive Computing" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -12,8 +12,8 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/mapred_chi2.py" />
-    <option name="PARAMETERS" value="m" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/MapRedCatCount.py" />
+    <option name="PARAMETERS" value="reviews_devset.json" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
