@@ -15,11 +15,11 @@ class MrCat(MRJob):
                    reducer=self.get_A_C),
             MRStep(reducer_init=self.init_get_cat_count,
                    reducer=self.get_chi_sq),
-            MRStep(reducer=self.group_per_cat)
+            MRStep(reducer=self.group_per_cat),
+            MRStep(reducer=self.sort_cats)
         ]
 
     def mapper(self, _, line):
-
         stops = set(i.strip() for i in open('stopwords.txt'))
         special_string = '()[]{}.!?,;:+=-_"`~#@&*%€$§/\\1234567890\t'+"'"
         l = json.loads(line)
@@ -40,6 +40,7 @@ class MrCat(MRJob):
         for word in content_set.difference(stops):
             if len(word) > 0:
                 yield cat, word
+
     def init_get_cat_count(self):
         self.cat_count = {}
         self.N = 0
@@ -77,14 +78,17 @@ class MrCat(MRJob):
             chi_sq_val = self.N*(A*D-B*C)**2/((A+B)*(A+C)*(B+D)*(C+D))
             yield cat, [chi_sq_val, word]
 
-    def group_per_cat(self, key, values):
+    def group_per_cat(self, cat, values):
         result = {}
         for value, word in sorted(values, reverse=True):
             if len(result) == 75:
                 break
             result[word] = value
-        yield key, result
+        yield None, (cat, result)
 
+    def sort_cats(self, _, values):
+        for cat, result in sorted(values):
+            yield cat, result
 
 if __name__ == '__main__':
     MrCat.run()

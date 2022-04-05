@@ -1,14 +1,12 @@
 import sys
 import json
-import re
 from mrjob.job import MRJob
-import collections
 from mrjob.step import MRStep
-from mrjob.protocol import TextValueProtocol
+from mrjob.protocol import RawValueProtocol
 
 class MrFin(MRJob):
 
-    OUTPUT_PROTOCOL = TextValueProtocol
+    OUTPUT_PROTOCOL = RawValueProtocol
 
     def steps(self):
         return [
