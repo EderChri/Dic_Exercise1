@@ -9,7 +9,8 @@ class MrCatCount(MRJob):
 
     def steps(self):
         '''
-        This method defines the steps of this map reduce job
+        This method defines the steps of this map reduce job. First all reviews are mapped to <category, 1>. Then
+        the reducer sums the instances per category up and returns the category and the sum.
         :return: A list of MRStep objects with mapper and reducer set
         '''
         return [
