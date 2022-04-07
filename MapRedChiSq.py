@@ -110,6 +110,7 @@ class MrCat(MRJob):
                 A[word] += 1
             else:
                 A[word] = 1
+
         for word in word_list:
             # For each word get C by taking the number of reviews of the given category and subtract A
             C = self.cat_count[cat]-A[word]
@@ -136,9 +137,14 @@ class MrCat(MRJob):
                 word_count[cat] += 1
             else:
                 word_count[cat] = 1
-
+        cat_set = set()
         for content in value_list:
             [cat, A, C] = content
+            # Check if cat word combination already was yielded
+            if cat in cat_set:
+                continue
+            # Add to set so this won't be calculated again
+            cat_set.add(cat)
             # Get B by taking the number of times the word occurs in the category and subtract A
             B = sum(word_count.values())-A
             # Get D by taking the total number of reviews and subtracting A, B and C

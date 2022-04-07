@@ -36,7 +36,7 @@ class MrFin(MRJob):
         # Takes a line of the format <category> word:value word:value... and splits it by spaces and taking all but the
         # first element therefore having all word:value word:value elements in a list. Then splitting each element of
         # said list and takes only the words of each element.
-        words_list = [s.split(':')[0] for s in line.split(' ')[1:] ]
+        words_list = [s.split(':')[0] for s in line.split(' ')[1:]]
         yield _, words_list
 
     def sort_words(self, _, values):
