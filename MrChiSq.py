@@ -12,7 +12,7 @@ class MrChiSq(MRJob):
     the 75 most distinguishing words (valued in chi square value) per category.
     '''
 
-    # Properties that are set in the runner
+    # Properties that are set in the mapper_init
     total_counter = 0
     cat_counter = {}
 
@@ -72,7 +72,6 @@ class MrChiSq(MRJob):
 
         # Loads the dictionary
         A = dict(json.loads(content))
-        chi_sq = {}
 
         # Calculates the chi square value for each category
         for cat in A.keys():
@@ -83,9 +82,9 @@ class MrChiSq(MRJob):
             # D = Total number of reviews - A - B - C
             D = self.total_counter - A[cat] - B - C
             # Calculate chi square value
-            chi_sq[cat] = self.total_counter * (A[cat] * D - B * C) ** 2 / (
+            chi_sq = self.total_counter * (A[cat] * D - B * C) ** 2 / (
                     (A[cat] + B) * (A[cat] + C) * (B + D) * (C + D))
-            yield cat, [chi_sq[cat], word]
+            yield cat, [chi_sq, word]
 
     def group_per_cat(self, cat, values):
         '''
@@ -102,7 +101,6 @@ class MrChiSq(MRJob):
             if len(result) == 75:
                 break
             result[word] = value
-            # Add word to set to save for final output line
         yield None, (cat, result)
 
     def sort_cats(self, _, values):
