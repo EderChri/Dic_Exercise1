@@ -6,8 +6,8 @@ from collections import Counter
 
 class MrCat(MRJob):
     '''
-    Class that defines the map reduce job that gets reviews as input and outputs the sorted categories with their
-    75 most distinguishable words and their chi squared value.
+    Class that defines the map reduce job that gets reviews as input and returns the number of occurrences per word
+    per category
     '''
 
     # Defines the local files needed
@@ -16,17 +16,15 @@ class MrCat(MRJob):
     def steps(self):
         '''
         This method defines the steps of this map reduce job. First all valid words (no stopwords,...) in each review
-        are mapped to <category, word>. Then the initial reducer gets the number of reviews as well as the number
-        of reviews per category. The next reducer calculates the A and the C value. In the next step again the inital
-        reducer gets the number of reviews as well as the number of reviews per category. The next reducer calculates
-        the chi squared value. In the next step the 75 most distinguishable words are selected per category. In the last
-        step all categories are alphabetically sorted.
-        :return: A list of MRStep objects with mapper and reducer set
+        are mapped to <word, category>. The combiner counts the number of occurrences per word for each category.
+        The reducer sums up the output of the combiner and emits <word, dictionary> where dictionary contains the
+        occurrences of the word for each category.
+        :return: A list of MRStep objects with mapper, combiner and reducer set
         '''
         return [
             MRStep(mapper=self.word_cat_pairs_per_review,
-                   combiner=self.combiner,
-                   reducer=self.reducer)
+                   combiner=self.word_per_cat,
+                   reducer=self.reduce_words_per_cat)
         ]
 
     def word_cat_pairs_per_review(self, _, line):
@@ -47,18 +45,13 @@ class MrCat(MRJob):
         l = json.loads(line)
         cat, content = l['category'], l['reviewText']
         content_str = content.lower()
+
+        # Counts the mapper calls => equal to number of reviews after job
         self.increment_counter('mapper calls', 'counter')
+        # Counts the mapper calls for each category => equal to number of reviews per category after job
         self.increment_counter('catcounter', cat)
-        # The following line creates a mapping table that maps every special character to an empty string
-        # Then every special character is replaced with translate. Next any leading or trailing whitespaces are removed
-        # In the last step the content string is split by any arbitrary number of whitespaces, as these can occur due to
-        # dots being replaced by whitespaces.
-        content_str = re.split(r'\s+',
-                               str.strip(
-                                   content_str.translate(
-                                       str.maketrans(special_string, ' ' * len(special_string)))
-                                   )
-                               )
+        # This line splits per special character, digit, tab or whitespace
+        content_str = re.split(f"\s|\t|[0-9]|[{re.escape(special_string)}]", content_str)
         # Removes duplicates
         content_set = set(content_str)
 
@@ -67,13 +60,31 @@ class MrCat(MRJob):
             if len(word) > 0:
                 yield word, cat
 
-    def combiner(self, word, cats):
+    def word_per_cat(self, word, cats):
+        '''
+        Combiner: Counts the occurrences of word for each category
+        :param word: Word as key
+        :type word: str
+        :param cats: List of categories where the word occurs
+        :type cats: list of strings
+        :return: Returns a key value pair of word (key) and a dictionary of number of word occurrences (value)
+        '''
 
         yield word, dict(Counter(cats))
 
-    def reducer(self, word, word_count_dicts):
+    def reduce_words_per_cat(self, word, word_count_dicts):
+        '''
+        Reducer: Sums up the dictionaries received from the combiner.
+        :param word: Word as key
+        :type word: str
+        :param word_count_dicts: A list of dictionaries of occurrences of Word per category
+        :type word_count_dicts: generator (list of dictionaries with string as key and int as value)
+        :return: Returns a key value pair of word (key) and a dictionary of number of word occurrences (value)
+        '''
 
         word_count = Counter({})
+
+        # Merges multiple dictionaries into one according to key
         for word_dic in word_count_dicts:
             new_count = Counter(word_dic)
             word_count.update(new_count)
