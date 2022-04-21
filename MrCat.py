@@ -3,11 +3,12 @@ import re
 from mrjob.job import MRJob
 from mrjob.step import MRStep
 from collections import Counter
+from collections import defaultdict
 
 class MrCat(MRJob):
     '''
     Class that defines the map reduce job that gets reviews as input and returns the number of occurrences per word
-    per category
+    per category and total occurrences per word
     '''
 
     # Defines the local files needed
@@ -17,8 +18,8 @@ class MrCat(MRJob):
         '''
         This method defines the steps of this map reduce job. First all valid words (no stopwords,...) in each review
         are mapped to <word, category>. The combiner counts the number of occurrences per word for each category.
-        The reducer sums up the output of the combiner and emits <word, dictionary> where dictionary contains the
-        occurrences of the word for each category.
+        The reducer sums up the output of the combiner and emits
+        <(word category), (Number of occurrences per category, total occurrences of word>.
         :return: A list of MRStep objects with mapper, combiner and reducer set
         '''
         return [
@@ -67,28 +68,32 @@ class MrCat(MRJob):
         :type word: str
         :param cats: List of categories where the word occurs
         :type cats: list of strings
-        :return: Returns a key value pair of word (key) and a dictionary of number of word occurrences (value)
+        :return: Returns a key value pair of word (key) and a pair of category and count as value
         '''
 
-        yield word, dict(Counter(cats))
+        for cat, count in dict(Counter(cats)).items():
+            yield word, (cat, count)
 
-    def reduce_words_per_cat(self, word, word_count_dicts):
+    def reduce_words_per_cat(self, word, word_counts):
         '''
-        Reducer: Sums up the dictionaries received from the combiner.
+        Reducer: Sums up the counts received from the combiner.
         :param word: Word as key
         :type word: str
-        :param word_count_dicts: A list of dictionaries of occurrences of Word per category
-        :type word_count_dicts: generator (list of dictionaries with string as key and int as value)
-        :return: Returns a key value pair of word (key) and a dictionary of number of word occurrences (value)
+        :param word_counts: A list of counts of occurrences of Word per category
+        :type word_counts: generator (list of category (str) and counts (int) pairs)
+        :return: Returns a key value pair of (word,category) (key) and
+        (number of occurrences per category, total number
+        of occurrences) as value
         '''
 
-        word_count = Counter({})
+        counter = defaultdict(int)
+        total_count = 0
+        for cat, count in list(word_counts):
+            counter[cat] += count
+            total_count += count
 
-        # Merges multiple dictionaries into one according to key
-        for word_dic in word_count_dicts:
-            new_count = Counter(word_dic)
-            word_count.update(new_count)
-        yield word, dict(word_count)
+        for cat in counter.keys():
+            yield (word, cat), (counter[cat], total_count)
 
 if __name__ == '__main__':
     MrCat.run()

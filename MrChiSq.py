@@ -1,6 +1,6 @@
 import json
 import re
-import sys
+import ast
 from mrjob.job import MRJob
 from mrjob.step import MRStep
 from mrjob.protocol import RawProtocol
@@ -8,7 +8,8 @@ from mrjob.protocol import RawProtocol
 
 class MrChiSq(MRJob):
     '''
-    Class that defines the map reduce job that gets words and occurrences of the words per category as input and returns
+    Class that defines the map reduce job that gets words, occurrences of the words per category and total number of
+    occurrences of the word as input and returns
     the 75 most distinguishing words (valued in chi square value) per category.
     '''
 
@@ -51,40 +52,34 @@ class MrChiSq(MRJob):
         Mapper: Calculates the chi square value for each word and category
         :param _: Key from the raw input
         :type _: None
-        :param line: A line containing a word and a dictionary which contains the categories as keys and the number
-        of occurrences for the word per category.
+        :param line: A line containing a (word, category) pair and a (count per category, total number of occurrences)
+        pair
         :type line: str
         :return: a key value pair, the category as key and a list containing the chi square value and the word as value
         '''
 
         line = str(line)
+        # Replaces ' with " if line has wrong format
+        if "'" in line:
+            line = line.replace("'", '"')
 
         # Splits according to the first tab or first space, depending on the selected protocol
-        if '\t' in line:
-            word, content = str(line).split('\t', 1)
+        if "\t" in line:
+            key, value = line.split('\t', 1)
         else:
-            word, content = str(line).split(' ', 1)
+            key, value = re.split(r"\]\s\[", line)
+            key += "]"
+            value = "[" + value
+        # Reads in the string as list
+        [word, cat] = ast.literal_eval(key)
+        [A, n_word] = ast.literal_eval(value)
 
-        # Replaces ' with " if content has wrong format
-        content = str(content)
-        if "'" in content:
-            content = content.replace("'", '"')
-
-        # Loads the dictionary
-        A = dict(json.loads(content))
-
-        # Calculates the chi square value for each category
-        for cat in A.keys():
-            # C = Number of reviews per category - number of reviews containing word
-            C = self.cat_counter[cat] - A[cat]
-            # B = Number of reviews containing word - number of reviews in category containing word
-            B = sum(A.values()) - A[cat]
-            # D = Total number of reviews - A - B - C
-            D = self.total_counter - A[cat] - B - C
-            # Calculate chi square value
-            chi_sq = self.total_counter * (A[cat] * D - B * C) ** 2 / (
-                    (A[cat] + B) * (A[cat] + C) * (B + D) * (C + D))
-            yield cat, [chi_sq, word]
+        B = n_word - A
+        C = self.cat_counter[cat] - A
+        D = self.total_counter - A - B -C
+        chi_sq = self.total_counter * (A * D - B * C) ** 2 / (
+                (A + B) * (A + C) * (B + D) * (C + D))
+        yield cat, [chi_sq, word]
 
     def group_per_cat(self, cat, values):
         '''
@@ -119,7 +114,7 @@ class MrChiSq(MRJob):
             # whitespaces, quotes and apostrophes. Multiple replace() calls are not beautiful but efficient
             # See https://stackoverflow.com/questions/3411771/best-way-to-replace-multiple-characters-in-a-string
             words.update(result.keys())
-            yield '<' + str(cat) +'>', str(result)[1:-1].replace('"','').replace(' ','').replace(',',' ').replace("'", '')
+            yield None ,'<' + str(cat) +'>' + " " +str(result)[1:-1].replace('"','').replace(' ','').replace(',',' ').replace("'", '')
         # Write last line containing all the words to output
         # Sorts the words first alphabetically, casts list to str and removes brackets
         # Then removes all whitespaces, and '. At the end replaces all commas with whitespaces to achieve desired format
